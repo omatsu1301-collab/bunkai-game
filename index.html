@@ -163,6 +163,7 @@
       font-weight: bold;
       color: #f0f0f0;
       line-height: 1.6;
+      margin-top: 16px;
     }
 
     .choices {
@@ -193,42 +194,31 @@
     .choice-btn:disabled { cursor: default; opacity: 0.6; }
     .choice-btn.selected { border-color: #f5a623; background: #2f3545; }
 
-    /* フィードバック */
-    .feedback-box {
-      background: #1e3a2f;
-      border: 2px solid #2ecc71;
-      border-radius: 16px;
-      padding: 20px 22px;
+    /* リアクション吹き出し */
+    .reaction-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
       margin-top: 16px;
-      display: none;
+      opacity: 0;
+      transform: translateX(-10px);
+      transition: all 0.3s ease;
     }
 
-    .feedback-box.show { display: block; }
-
-    .feedback-tag {
-      display: inline-block;
-      font-size: 0.75rem;
-      font-weight: bold;
-      padding: 4px 12px;
-      border-radius: 20px;
-      margin-bottom: 10px;
-      letter-spacing: 0.05em;
+    .reaction-row.show {
+      opacity: 1;
+      transform: translateX(0);
     }
 
-    .tag-complex {
-      background: #e74c3c;
-      color: #fff;
-    }
-
-    .tag-complicated {
-      background: #2ecc71;
+    .reaction-bubble {
+      background: #f5a623;
+      border-radius: 0 16px 16px 16px;
+      padding: 12px 18px;
+      font-size: 0.95rem;
+      line-height: 1.6;
       color: #1a1f2e;
-    }
-
-    .feedback-text {
-      font-size: 0.92rem;
-      line-height: 1.75;
-      color: #d0f0e0;
+      font-weight: bold;
+      flex: 1;
     }
 
     .next-btn {
@@ -255,23 +245,29 @@
       padding: 30px 20px;
     }
 
-    .result-title {
-      font-size: 1.4rem;
-      color: #f5a623;
-      font-weight: bold;
+    .result-intro {
+      font-size: 0.95rem;
+      color: #aaa;
       margin-bottom: 8px;
     }
 
-    .score-display {
-      font-size: 3.5rem;
+    .result-character {
+      font-size: 1.6rem;
+      color: #f5a623;
       font-weight: bold;
-      color: #f0f0f0;
-      margin: 20px 0 8px;
+      line-height: 1.4;
+      margin-bottom: 8px;
     }
 
-    .score-label {
-      font-size: 0.85rem;
-      color: #aaa;
+    .result-emoji {
+      font-size: 3rem;
+      margin: 16px 0;
+    }
+
+    .result-tagline {
+      font-size: 0.95rem;
+      color: #ccc;
+      line-height: 1.7;
       margin-bottom: 28px;
     }
 
@@ -292,7 +288,7 @@
     }
 
     .diagnosis-text {
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       line-height: 1.75;
       color: #f0f0f0;
     }
@@ -352,7 +348,6 @@
     @media (max-width: 480px) {
       .genre-cards { flex-direction: column; align-items: center; }
       .genre-card { width: 100%; max-width: 280px; }
-      .score-display { font-size: 2.8rem; }
     }
   </style>
 </head>
@@ -409,9 +404,9 @@
         <button class="choice-btn" id="choice-b" onclick="selectChoice(1)"></button>
       </div>
 
-      <div class="feedback-box" id="feedback-box">
-        <span class="feedback-tag" id="feedback-tag"></span>
-        <div class="feedback-text" id="feedback-text"></div>
+      <div class="reaction-row" id="reaction-row">
+        <div class="character-icon">🧑</div>
+        <div class="reaction-bubble" id="reaction-text"></div>
       </div>
 
       <button class="next-btn" id="next-btn" onclick="nextScene()" style="display:none;">次へ ▶</button>
@@ -421,9 +416,10 @@
   <!-- 結果画面 -->
   <div class="screen" id="screen-result">
     <div class="result-screen">
-      <div class="result-title">診断結果</div>
-      <div class="score-display" id="score-display"></div>
-      <div class="score-label">3問中 正しく見分けられた場面</div>
+      <div class="result-intro">あなたの思考の癖は…</div>
+      <div class="result-character" id="result-character"></div>
+      <div class="result-emoji" id="result-emoji"></div>
+      <div class="result-tagline" id="result-tagline"></div>
       <div class="diagnosis-box">
         <div class="diagnosis-title">【あなたの分解思考の傾向】</div>
         <div class="diagnosis-text" id="diagnosis-text"></div>
@@ -446,31 +442,22 @@
           situation: "来週、上司にプロジェクトの進捗を報告する。",
           question: "さて、何を準備する？",
           choices: ["報告する数字やデータを整理してスライドにまとめる", "「上司が納得する伝え方」を考える"],
-          correctIndex: 0,
-          feedbacks: [
-            { tag: "分解していい部分", type: "complicated", text: "データの整理は分解していい部分です。条件が明確なので、整理するほど報告の精度が上がります。どんどん最適化してください。" },
-            { tag: "分解できない部分", type: "complex", text: "相手が納得する伝え方は分解できない部分です。上司の反応は感情と文脈が絡みます。準備より、当日の反応を観察して言葉を調整する方が機能します。" }
-          ]
+          reactions: ["資料、前日の夜に作り直したりする？", "上司の顔、思い浮かべながら考えてるでしょ。"],
+          complexChoice: 1
         },
         {
           situation: "同僚から「最近仕事がうまくいかない」と相談された。",
           question: "さて、どう返す？",
           choices: ["問題の原因を一緒に整理して、解決策を考える", "まず「最近どんなことがあったの？」と話を聞く"],
-          correctIndex: 1,
-          feedbacks: [
-            { tag: "分解できない部分", type: "complex", text: "問題の整理と解決策の検討は分解していい部分です。ただ、相手がまだ話を聞いてほしい段階のときに分解を始めると、かえって距離が開きます。" },
-            { tag: "分解できない部分", type: "complex", text: "相手の状態を把握することは分解できない部分です。感情と文脈が絡むので、まず観察することが先です。何が起きているかが見えてから、整理が機能し始めます。" }
-          ]
+          reactions: ["ちゃんと、「できる大人だ」尊敬します。", "よっ！！人気者！！"],
+          complexChoice: 1
         },
         {
           situation: "最近チームの雰囲気が悪く、会話が少なくなっている。",
           question: "さて、どうする？",
           choices: ["1on1の頻度を増やすスケジュールを組む", "「なぜ雰囲気が悪いのか」の原因を分析する"],
-          correctIndex: 0,
-          feedbacks: [
-            { tag: "分解していい部分", type: "complicated", text: "1on1のスケジュールを組むことは分解していい部分です。頻度や日程は条件が明確なので、設計できます。ただ、何を話すかは相手の状態次第です。場を作ることと、場を機能させることは別の課題です。" },
-            { tag: "分解できない部分", type: "complex", text: "チームの雰囲気は分解できない部分です。感情と人間関係が絡み合っているので、原因を特定しようとするほど空回りします。まず個別に話を聞きながら、少しずつ全体像を掴んでいく探索が機能します。" }
-          ]
+          reactions: ["胃に穴あかない？", "頭痛くなるでしょ？"],
+          complexChoice: 1
         }
       ]
     },
@@ -480,31 +467,22 @@
           situation: "ダイエットを始めようと決めた。",
           question: "さて、まず何をする？",
           choices: ["1日の摂取カロリーの上限を決めて、アプリで記録を始める", "「なぜ今まで続かなかったのか」を考える"],
-          correctIndex: 0,
-          feedbacks: [
-            { tag: "分解していい部分", type: "complicated", text: "カロリーの上限設定と記録は分解していい部分です。数値が明確なので、管理するほど精度が上がります。ただし、記録が目的になり始めたら要注意です。" },
-            { tag: "分解できない部分", type: "complex", text: "続かなかった理由は分解できない部分です。習慣と感情が絡み合っているので、分析より先に小さく試して観察する方が機能します。" }
-          ]
+          reactions: ["素直に尊敬。", "やったね。おそろい。"],
+          complexChoice: 1
         },
         {
           situation: "始めて3日目。カロリー記録が面倒になってきた。",
           question: "さて、どうする？",
           choices: ["記録するものを「夕食だけ」に絞って続ける", "「なぜ面倒に感じるのか」を掘り下げて考える"],
-          correctIndex: 0,
-          feedbacks: [
-            { tag: "分解していい部分", type: "complicated", text: "記録の範囲を絞ることは分解していい部分です。管理コストを下げる設計は最適化できます。続けられる仕組みを作ることが、分解思考の正しい使い方です。" },
-            { tag: "分解できない部分", type: "complex", text: "面倒に感じる気持ちは分解できない部分です。感情を分析しようとするより、仕組みを小さく調整して試す方が先に機能します。" }
-          ]
+          reactions: ["かしこいね。マネしよ。", "…で、おなか空くんだよね。"],
+          complexChoice: 1
         },
         {
           situation: "1週間続けたが、体重がまったく変わっていない。",
           question: "さて、どうする？",
           choices: ["食事の内容や運動量を見直して、何が足りないか整理する", "「自分には向いていないのかも」と別の方法を探し始める"],
-          correctIndex: 0,
-          feedbacks: [
-            { tag: "分解していい部分", type: "complicated", text: "食事内容や運動量の見直しは分解していい部分です。数値と行動が明確なので、整理するほど改善の糸口が見えます。1週間のデータは十分な観察材料です。" },
-            { tag: "分解できない部分", type: "complex", text: "方法が自分に合うかどうかは分解できない部分です。ただし、別の方法を探す前に1週間のデータを観察することが先です。試した結果を見ないまま方法を変えても、同じループに入ります。" }
-          ]
+          reactions: ["1週間…ってことは7日間ダイエットできるの⁉", "おそろっち。ハイタッチしよ。"],
+          complexChoice: 1
         }
       ]
     },
@@ -514,58 +492,61 @@
           situation: "来週のデート、準備を始めようとしている。",
           question: "さて、まず何をする？",
           choices: ["お店を条件で絞り込んで予約する", "「彼女が楽しいと思う空気」を作る方法を考える"],
-          correctIndex: 0,
-          feedbacks: [
-            { tag: "分解していい部分", type: "complicated", text: "お店選びは分解していい部分です。条件が明確なので、絞り込むほど精度が上がります。どんどん最適化してください。" },
-            { tag: "分解できない部分", type: "complex", text: "空気感は分解できない部分です。計画しようとするほど、相手はその必死さを感じ取ります。ここは観察と探索の領域です。" }
-          ]
+          reactions: ["絞り込みから緊張するよね。", "君のやさしさがひしひしと伝わってくるよ（涙）"],
+          complexChoice: 1
         },
         {
           situation: "当日、食事中に会話が途切れた。",
           question: "さて、どうする？",
           choices: ["事前に用意しておいた話題リストから次のネタを出す", "さっき彼女が笑った話題をもう少し深掘りする"],
-          correctIndex: 1,
-          feedbacks: [
-            { tag: "分解できない部分", type: "complex", text: "話題の準備は分解していい部分です。ただ、それを「いつ出すか」の管理まで始めると、相手はその余裕のなさを感じ取ります。準備は準備、当日は観察に切り替えましょう。" },
-            { tag: "分解できない部分", type: "complex", text: "会話の流れは分解できない部分です。でもあなたは相手の反応を観察して、そこを深掘りしました。これが複雑な課題への正しいアプローチです。" }
-          ]
+          reactions: ["僕の頭の中とおんなじ", "なんですか？デート慣れしてるんですか？"],
+          complexChoice: 1
         },
         {
           situation: "食事が終わった。この後どうするか迷っている。",
           question: "さて、どうする？",
           choices: ["事前に調べておいた2軒目のお店に移動する", "彼女の様子を見て、このまま帰るか続けるか決める"],
-          correctIndex: 1,
-          feedbacks: [
-            { tag: "分解していい部分", type: "complicated", text: "2軒目の候補を調べておくのは分解していい部分です。ただ、実行するかどうかは相手の状態次第です。準備と判断は別の課題です。" },
-            { tag: "分解できない部分", type: "complex", text: "帰るタイミングの判断は分解できない部分です。相手の表情や声のトーンを観察して、その場で決める。これが複雑な課題への向き合い方です。" }
-          ]
+          reactions: ["スタミナすごい…え、営業職？", "ははーん、モテるでしょ？"],
+          complexChoice: 1
         }
       ]
     }
   };
 
-  const diagnoses = [
+  const characters = [
     {
-      score: 0,
-      text: "分解したくなる気持ち、よく分かります。でも今回の3場面では、分解が逆効果になる部分を分解しようとしていました。「整理できそうなもの」と「整理すると壊れるもの」、その違いに気づくところから始めてみてください。"
+      id: 'A',
+      name: '四角メガネくん',
+      emoji: '🤓',
+      tagline: '設計図が頭に刺さってるよ。整理と計画大好き。だって、落ち着くもん。',
+      diagnosis: '分解できる課題を見つけると、とにかく手を動かしたくなるタイプです。準備の精度は高い。ただ、感情や文脈が絡む場面でも整理しようとすると、相手はその必死さを感じ取ります。「これは整理していい課題か？」を一度だけ問いかけてみてください。'
     },
     {
-      score: 1,
-      text: "1問は正しく見分けられました。分解していい部分とそうでない部分、感覚としてはつかみかけています。次は「なぜここは分解できないのか」を意識しながら読み進めてみてください。"
+      id: 'B',
+      name: 'いじりがいあるタイプ',
+      emoji: '😏',
+      tagline: '整理派だけど、フィーリングとか勘も大事にできるかわいいやつ。いっちゃんモテるよ。',
+      diagnosis: '分解思考を使いながら、感覚も手放さないバランス型です。整理できる部分はしっかり最適化して、感情が絡む場面では観察に切り替える。その切り替えがもう少し早くなると、さらに動きやすくなります。'
     },
     {
-      score: 2,
-      text: "2問正解。分解思考の使い分けが身についてきています。あと一歩です。うまくいかなかった1問のフィードバックをもう一度読んでみると、自分の癖が見えてくるかもしれません。"
+      id: 'C',
+      name: 'ヘリウム風船',
+      emoji: '🎈',
+      tagline: '場の雰囲気察知能力ピカイチ。僕が一番憧れるタイプ。',
+      diagnosis: '感情や文脈を読む力が高く、複雑な課題への対応が自然にできています。ただ、分解していい課題まで感覚で乗り切ろうとすると、準備不足になることも。店選びやスケジュール設計など、条件が明確な部分は迷わず分解してください。'
     },
     {
-      score: 3,
-      text: "3問全問正解。分解していい部分とそうでない部分を、正しく見分けられています。この感覚を持ったまま次の章に進むと、プロンプトがより深く使えるはずです。"
+      id: 'D',
+      name: 'ウルトラマン帽子',
+      emoji: '🦸',
+      tagline: '小学生のときウルトラマン帽子やってたでしょ？直感も論理もいい塩梅。できるね。君。',
+      diagnosis: '直感と論理を場面によって使い分けられています。分解していい部分は整理して、感情が絡む部分は観察で対応する。この二刀流がすでに身についています。あとは「やめるサイン」を早めに察知できると、さらに無駄がなくなります。'
     }
   ];
 
   let currentGenre = null;
   let currentScene = 0;
-  let score = 0;
+  let selections = [];
 
   function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -575,7 +556,7 @@
   function startGame(genre) {
     currentGenre = genre;
     currentScene = 0;
-    score = 0;
+    selections = [];
     showScreen('screen-game');
     renderScene();
   }
@@ -605,13 +586,13 @@
     btnA.className = 'choice-btn';
     btnB.className = 'choice-btn';
 
-    document.getElementById('feedback-box').classList.remove('show');
+    const reactionRow = document.getElementById('reaction-row');
+    reactionRow.classList.remove('show');
     document.getElementById('next-btn').style.display = 'none';
   }
 
   function selectChoice(index) {
     const scene = scenarios[currentGenre].scenes[currentScene];
-    const feedback = scene.feedbacks[index];
 
     document.getElementById('choice-a').disabled = true;
     document.getElementById('choice-b').disabled = true;
@@ -619,14 +600,12 @@
     if (index === 0) document.getElementById('choice-a').classList.add('selected');
     else document.getElementById('choice-b').classList.add('selected');
 
-    if (index === scene.correctIndex) score++;
+    selections.push(index);
 
-    const tagEl = document.getElementById('feedback-tag');
-    tagEl.textContent = feedback.tag;
-    tagEl.className = 'feedback-tag ' + (feedback.type === 'complex' ? 'tag-complex' : 'tag-complicated');
-
-    document.getElementById('feedback-text').textContent = feedback.text;
-    document.getElementById('feedback-box').classList.add('show');
+    document.getElementById('reaction-text').textContent = scene.reactions[index];
+    setTimeout(() => {
+      document.getElementById('reaction-row').classList.add('show');
+    }, 100);
 
     const isLast = currentScene === 2;
     const nextBtn = document.getElementById('next-btn');
@@ -643,11 +622,27 @@
     }
   }
 
+  function getCharacter() {
+    const scenes = scenarios[currentGenre].scenes;
+    let complexCount = 0;
+    for (let i = 0; i < 3; i++) {
+      if (selections[i] === scenes[i].complexChoice) complexCount++;
+    }
+    const lastIsComplex = selections[2] === scenes[2].complexChoice;
+
+    if (complexCount <= 1 && !lastIsComplex) return characters[0]; // 四角メガネくん
+    if (complexCount <= 1 && lastIsComplex) return characters[1];  // いじりがいあるタイプ
+    if (complexCount >= 2 && lastIsComplex) return characters[2];  // ヘリウム風船
+    return characters[3];                                           // ウルトラマン帽子
+  }
+
   function showResult() {
     showScreen('screen-result');
-    document.getElementById('score-display').textContent = `${score} / 3`;
-    const diag = diagnoses.find(d => d.score === score);
-    document.getElementById('diagnosis-text').textContent = diag.text;
+    const chara = getCharacter();
+    document.getElementById('result-character').textContent = chara.name;
+    document.getElementById('result-emoji').textContent = chara.emoji;
+    document.getElementById('result-tagline').textContent = chara.tagline;
+    document.getElementById('diagnosis-text').textContent = chara.diagnosis;
   }
 
   function resetGame() {
