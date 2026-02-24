@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>分解思考シミュレーター</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a1f2e;
+      color: #f0f0f0;
+      font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      width: 100%;
+    }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* タイトル画面 */
+    .title-screen {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .title-screen h1 {
+      font-size: 1.6rem;
+      color: #f5a623;
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+
+    .title-screen p {
+      font-size: 0.95rem;
+      color: #aaa;
+      margin-bottom: 40px;
+      line-height: 1.7;
+    }
+
+    .genre-cards {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .genre-card {
+      background: #2a2f3e;
+      border: 2px solid #3a3f4e;
+      border-radius: 16px;
+      padding: 28px 20px;
+      width: 160px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .genre-card:hover {
+      border-color: #f5a623;
+      transform: translateY(-4px);
+      background: #2f3545;
+    }
+
+    .genre-card .icon {
+      font-size: 2.4rem;
+      margin-bottom: 12px;
+    }
+
+    .genre-card .label {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #f0f0f0;
+    }
+
+    /* ゲーム画面 */
+    .game-screen {
+      padding: 20px 0;
+    }
+
+    .progress-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .progress-label {
+      font-size: 0.85rem;
+      color: #f5a623;
+      font-weight: bold;
+    }
+
+    .progress-dots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #3a3f4e;
+    }
+
+    .dot.active { background: #f5a623; }
+    .dot.done { background: #f5a623; opacity: 0.4; }
+
+    .scene-box {
+      background: #2a2f3e;
+      border-radius: 20px;
+      padding: 28px 24px;
+      margin-bottom: 20px;
+    }
+
+    .character-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .character-icon {
+      font-size: 2rem;
+      background: #3a3f4e;
+      border-radius: 50%;
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .bubble {
+      background: #343a4e;
+      border-radius: 0 16px 16px 16px;
+      padding: 14px 18px;
+      font-size: 0.95rem;
+      line-height: 1.7;
+      color: #f0f0f0;
+      flex: 1;
+    }
+
+    .situation-label {
+      font-size: 0.75rem;
+      color: #f5a623;
+      font-weight: bold;
+      margin-bottom: 10px;
+      letter-spacing: 0.05em;
+    }
+
+    .question-text {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #f0f0f0;
+      line-height: 1.6;
+    }
+
+    .choices {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .choice-btn {
+      background: #2a2f3e;
+      border: 2px solid #3a3f4e;
+      border-radius: 14px;
+      padding: 18px 20px;
+      color: #f0f0f0;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .choice-btn:hover:not(:disabled) {
+      border-color: #f5a623;
+      background: #2f3545;
+    }
+
+    .choice-btn:disabled { cursor: default; opacity: 0.6; }
+    .choice-btn.selected { border-color: #f5a623; background: #2f3545; }
+
+    /* フィードバック */
+    .feedback-box {
+      background: #1e3a2f;
+      border: 2px solid #2ecc71;
+      border-radius: 16px;
+      padding: 20px 22px;
+      margin-top: 16px;
+      display: none;
+    }
+
+    .feedback-box.show { display: block; }
+
+    .feedback-tag {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: bold;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+      letter-spacing: 0.05em;
+    }
+
+    .tag-complex {
+      background: #e74c3c;
+      color: #fff;
+    }
+
+    .tag-complicated {
+      background: #2ecc71;
+      color: #1a1f2e;
+    }
+
+    .feedback-text {
+      font-size: 0.92rem;
+      line-height: 1.75;
+      color: #d0f0e0;
+    }
+
+    .next-btn {
+      display: block;
+      width: 100%;
+      margin-top: 20px;
+      background: #f5a623;
+      color: #1a1f2e;
+      border: none;
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .next-btn:hover { background: #e09510; transform: translateY(-2px); }
+
+    /* 結果画面 */
+    .result-screen {
+      text-align: center;
+      padding: 30px 20px;
+    }
+
+    .result-title {
+      font-size: 1.4rem;
+      color: #f5a623;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .score-display {
+      font-size: 3.5rem;
+      font-weight: bold;
+      color: #f0f0f0;
+      margin: 20px 0 8px;
+    }
+
+    .score-label {
+      font-size: 0.85rem;
+      color: #aaa;
+      margin-bottom: 28px;
+    }
+
+    .diagnosis-box {
+      background: #2a2f3e;
+      border-radius: 16px;
+      padding: 24px 22px;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+
+    .diagnosis-title {
+      font-size: 0.8rem;
+      color: #f5a623;
+      font-weight: bold;
+      margin-bottom: 10px;
+      letter-spacing: 0.05em;
+    }
+
+    .diagnosis-text {
+      font-size: 0.95rem;
+      line-height: 1.75;
+      color: #f0f0f0;
+    }
+
+    .cta-box {
+      background: #1e2a3e;
+      border: 2px solid #f5a623;
+      border-radius: 16px;
+      padding: 20px 22px;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+
+    .cta-text {
+      font-size: 0.92rem;
+      line-height: 1.75;
+      color: #f0f0f0;
+      margin-bottom: 16px;
+    }
+
+    .return-btn {
+      display: block;
+      width: 100%;
+      background: #f5a623;
+      color: #1a1f2e;
+      border: none;
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      text-decoration: none;
+      text-align: center;
+    }
+
+    .return-btn:hover { background: #e09510; transform: translateY(-2px); }
+
+    .retry-btn {
+      display: block;
+      width: 100%;
+      margin-top: 12px;
+      background: transparent;
+      color: #aaa;
+      border: 2px solid #3a3f4e;
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .retry-btn:hover { border-color: #aaa; color: #f0f0f0; }
+
+    @media (max-width: 480px) {
+      .genre-cards { flex-direction: column; align-items: center; }
+      .genre-card { width: 100%; max-width: 280px; }
+      .score-display { font-size: 2.8rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- タイトル画面 -->
+  <div class="screen active" id="screen-title">
+    <div class="title-screen">
+      <h1>分解思考<br>シミュレーター</h1>
+      <p>あなたは「分解していい部分」と<br>「分解してはいけない部分」を<br>見分けられますか？</p>
+      <div class="genre-cards">
+        <div class="genre-card" onclick="startGame('work')">
+          <div class="icon">💼</div>
+          <div class="label">仕事</div>
+        </div>
+        <div class="genre-card" onclick="startGame('diet')">
+          <div class="icon">🥗</div>
+          <div class="label">ダイエット</div>
+        </div>
+        <div class="genre-card" onclick="startGame('date')">
+          <div class="icon">💬</div>
+          <div class="label">デート</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ゲーム画面 -->
+  <div class="screen" id="screen-game">
+    <div class="game-screen">
+      <div class="progress-bar">
+        <span class="progress-label" id="progress-label">場面 1 / 3</span>
+        <div class="progress-dots">
+          <div class="dot" id="dot-0"></div>
+          <div class="dot" id="dot-1"></div>
+          <div class="dot" id="dot-2"></div>
+        </div>
+      </div>
+
+      <div class="scene-box">
+        <div class="character-row">
+          <div class="character-icon">🧑</div>
+          <div class="bubble">
+            <div class="situation-label">【状況】</div>
+            <div id="situation-text"></div>
+          </div>
+        </div>
+        <div class="question-text" id="question-text"></div>
+      </div>
+
+      <div class="choices">
+        <button class="choice-btn" id="choice-a" onclick="selectChoice(0)"></button>
+        <button class="choice-btn" id="choice-b" onclick="selectChoice(1)"></button>
+      </div>
+
+      <div class="feedback-box" id="feedback-box">
+        <span class="feedback-tag" id="feedback-tag"></span>
+        <div class="feedback-text" id="feedback-text"></div>
+      </div>
+
+      <button class="next-btn" id="next-btn" onclick="nextScene()" style="display:none;">次へ ▶</button>
+    </div>
+  </div>
+
+  <!-- 結果画面 -->
+  <div class="screen" id="screen-result">
+    <div class="result-screen">
+      <div class="result-title">診断結果</div>
+      <div class="score-display" id="score-display"></div>
+      <div class="score-label">3問中 正しく見分けられた場面</div>
+      <div class="diagnosis-box">
+        <div class="diagnosis-title">【あなたの分解思考の傾向】</div>
+        <div class="diagnosis-text" id="diagnosis-text"></div>
+      </div>
+      <div class="cta-box">
+        <div class="cta-text">次の章には、コピペで使えるプロンプトを用意しています。ぱっと思いつくもやもやを、試しに繁雑か複雑かに分けてみてください。</div>
+        <a href="YOUR_NOTE_URL" target="_blank" class="return-btn">記事に戻る ▶</a>
+      </div>
+      <button class="retry-btn" onclick="resetGame()">別のジャンルで試す</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const scenarios = {
+    work: {
+      scenes: [
+        {
+          situation: "来週、上司にプロジェクトの進捗を報告する。",
+          question: "さて、何を準備する？",
+          choices: ["報告する数字やデータを整理してスライドにまとめる", "「上司が納得する伝え方」を考える"],
+          correctIndex: 0,
+          feedbacks: [
+            { tag: "分解していい部分", type: "complicated", text: "データの整理は分解していい部分です。条件が明確なので、整理するほど報告の精度が上がります。どんどん最適化してください。" },
+            { tag: "分解できない部分", type: "complex", text: "相手が納得する伝え方は分解できない部分です。上司の反応は感情と文脈が絡みます。準備より、当日の反応を観察して言葉を調整する方が機能します。" }
+          ]
+        },
+        {
+          situation: "同僚から「最近仕事がうまくいかない」と相談された。",
+          question: "さて、どう返す？",
+          choices: ["問題の原因を一緒に整理して、解決策を考える", "まず「最近どんなことがあったの？」と話を聞く"],
+          correctIndex: 1,
+          feedbacks: [
+            { tag: "分解できない部分", type: "complex", text: "問題の整理と解決策の検討は分解していい部分です。ただ、相手がまだ話を聞いてほしい段階のときに分解を始めると、かえって距離が開きます。" },
+            { tag: "分解できない部分", type: "complex", text: "相手の状態を把握することは分解できない部分です。感情と文脈が絡むので、まず観察することが先です。何が起きているかが見えてから、整理が機能し始めます。" }
+          ]
+        },
+        {
+          situation: "最近チームの雰囲気が悪く、会話が少なくなっている。",
+          question: "さて、どうする？",
+          choices: ["1on1の頻度を増やすスケジュールを組む", "「なぜ雰囲気が悪いのか」の原因を分析する"],
+          correctIndex: 0,
+          feedbacks: [
+            { tag: "分解していい部分", type: "complicated", text: "1on1のスケジュールを組むことは分解していい部分です。頻度や日程は条件が明確なので、設計できます。ただ、何を話すかは相手の状態次第です。場を作ることと、場を機能させることは別の課題です。" },
+            { tag: "分解できない部分", type: "complex", text: "チームの雰囲気は分解できない部分です。感情と人間関係が絡み合っているので、原因を特定しようとするほど空回りします。まず個別に話を聞きながら、少しずつ全体像を掴んでいく探索が機能します。" }
+          ]
+        }
+      ]
+    },
+    diet: {
+      scenes: [
+        {
+          situation: "ダイエットを始めようと決めた。",
+          question: "さて、まず何をする？",
+          choices: ["1日の摂取カロリーの上限を決めて、アプリで記録を始める", "「なぜ今まで続かなかったのか」を考える"],
+          correctIndex: 0,
+          feedbacks: [
+            { tag: "分解していい部分", type: "complicated", text: "カロリーの上限設定と記録は分解していい部分です。数値が明確なので、管理するほど精度が上がります。ただし、記録が目的になり始めたら要注意です。" },
+            { tag: "分解できない部分", type: "complex", text: "続かなかった理由は分解できない部分です。習慣と感情が絡み合っているので、分析より先に小さく試して観察する方が機能します。" }
+          ]
+        },
+        {
+          situation: "始めて3日目。カロリー記録が面倒になってきた。",
+          question: "さて、どうする？",
+          choices: ["記録するものを「夕食だけ」に絞って続ける", "「なぜ面倒に感じるのか」を掘り下げて考える"],
+          correctIndex: 0,
+          feedbacks: [
+            { tag: "分解していい部分", type: "complicated", text: "記録の範囲を絞ることは分解していい部分です。管理コストを下げる設計は最適化できます。続けられる仕組みを作ることが、分解思考の正しい使い方です。" },
+            { tag: "分解できない部分", type: "complex", text: "面倒に感じる気持ちは分解できない部分です。感情を分析しようとするより、仕組みを小さく調整して試す方が先に機能します。" }
+          ]
+        },
+        {
+          situation: "1週間続けたが、体重がまったく変わっていない。",
+          question: "さて、どうする？",
+          choices: ["食事の内容や運動量を見直して、何が足りないか整理する", "「自分には向いていないのかも」と別の方法を探し始める"],
+          correctIndex: 0,
+          feedbacks: [
+            { tag: "分解していい部分", type: "complicated", text: "食事内容や運動量の見直しは分解していい部分です。数値と行動が明確なので、整理するほど改善の糸口が見えます。1週間のデータは十分な観察材料です。" },
+            { tag: "分解できない部分", type: "complex", text: "方法が自分に合うかどうかは分解できない部分です。ただし、別の方法を探す前に1週間のデータを観察することが先です。試した結果を見ないまま方法を変えても、同じループに入ります。" }
+          ]
+        }
+      ]
+    },
+    date: {
+      scenes: [
+        {
+          situation: "来週のデート、準備を始めようとしている。",
+          question: "さて、まず何をする？",
+          choices: ["お店を条件で絞り込んで予約する", "「彼女が楽しいと思う空気」を作る方法を考える"],
+          correctIndex: 0,
+          feedbacks: [
+            { tag: "分解していい部分", type: "complicated", text: "お店選びは分解していい部分です。条件が明確なので、絞り込むほど精度が上がります。どんどん最適化してください。" },
+            { tag: "分解できない部分", type: "complex", text: "空気感は分解できない部分です。計画しようとするほど、相手はその必死さを感じ取ります。ここは観察と探索の領域です。" }
+          ]
+        },
+        {
+          situation: "当日、食事中に会話が途切れた。",
+          question: "さて、どうする？",
+          choices: ["事前に用意しておいた話題リストから次のネタを出す", "さっき彼女が笑った話題をもう少し深掘りする"],
+          correctIndex: 1,
+          feedbacks: [
+            { tag: "分解できない部分", type: "complex", text: "話題の準備は分解していい部分です。ただ、それを「いつ出すか」の管理まで始めると、相手はその余裕のなさを感じ取ります。準備は準備、当日は観察に切り替えましょう。" },
+            { tag: "分解できない部分", type: "complex", text: "会話の流れは分解できない部分です。でもあなたは相手の反応を観察して、そこを深掘りしました。これが複雑な課題への正しいアプローチです。" }
+          ]
+        },
+        {
+          situation: "食事が終わった。この後どうするか迷っている。",
+          question: "さて、どうする？",
+          choices: ["事前に調べておいた2軒目のお店に移動する", "彼女の様子を見て、このまま帰るか続けるか決める"],
+          correctIndex: 1,
+          feedbacks: [
+            { tag: "分解していい部分", type: "complicated", text: "2軒目の候補を調べておくのは分解していい部分です。ただ、実行するかどうかは相手の状態次第です。準備と判断は別の課題です。" },
+            { tag: "分解できない部分", type: "complex", text: "帰るタイミングの判断は分解できない部分です。相手の表情や声のトーンを観察して、その場で決める。これが複雑な課題への向き合い方です。" }
+          ]
+        }
+      ]
+    }
+  };
+
+  const diagnoses = [
+    {
+      score: 0,
+      text: "分解したくなる気持ち、よく分かります。でも今回の3場面では、分解が逆効果になる部分を分解しようとしていました。「整理できそうなもの」と「整理すると壊れるもの」、その違いに気づくところから始めてみてください。"
+    },
+    {
+      score: 1,
+      text: "1問は正しく見分けられました。分解していい部分とそうでない部分、感覚としてはつかみかけています。次は「なぜここは分解できないのか」を意識しながら読み進めてみてください。"
+    },
+    {
+      score: 2,
+      text: "2問正解。分解思考の使い分けが身についてきています。あと一歩です。うまくいかなかった1問のフィードバックをもう一度読んでみると、自分の癖が見えてくるかもしれません。"
+    },
+    {
+      score: 3,
+      text: "3問全問正解。分解していい部分とそうでない部分を、正しく見分けられています。この感覚を持ったまま次の章に進むと、プロンプトがより深く使えるはずです。"
+    }
+  ];
+
+  let currentGenre = null;
+  let currentScene = 0;
+  let score = 0;
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function startGame(genre) {
+    currentGenre = genre;
+    currentScene = 0;
+    score = 0;
+    showScreen('screen-game');
+    renderScene();
+  }
+
+  function renderScene() {
+    const scenes = scenarios[currentGenre].scenes;
+    const scene = scenes[currentScene];
+
+    document.getElementById('progress-label').textContent = `場面 ${currentScene + 1} / 3`;
+
+    for (let i = 0; i < 3; i++) {
+      const dot = document.getElementById(`dot-${i}`);
+      dot.className = 'dot';
+      if (i < currentScene) dot.classList.add('done');
+      if (i === currentScene) dot.classList.add('active');
+    }
+
+    document.getElementById('situation-text').textContent = scene.situation;
+    document.getElementById('question-text').textContent = scene.question;
+
+    const btnA = document.getElementById('choice-a');
+    const btnB = document.getElementById('choice-b');
+    btnA.textContent = 'A：' + scene.choices[0];
+    btnB.textContent = 'B：' + scene.choices[1];
+    btnA.disabled = false;
+    btnB.disabled = false;
+    btnA.className = 'choice-btn';
+    btnB.className = 'choice-btn';
+
+    document.getElementById('feedback-box').classList.remove('show');
+    document.getElementById('next-btn').style.display = 'none';
+  }
+
+  function selectChoice(index) {
+    const scene = scenarios[currentGenre].scenes[currentScene];
+    const feedback = scene.feedbacks[index];
+
+    document.getElementById('choice-a').disabled = true;
+    document.getElementById('choice-b').disabled = true;
+
+    if (index === 0) document.getElementById('choice-a').classList.add('selected');
+    else document.getElementById('choice-b').classList.add('selected');
+
+    if (index === scene.correctIndex) score++;
+
+    const tagEl = document.getElementById('feedback-tag');
+    tagEl.textContent = feedback.tag;
+    tagEl.className = 'feedback-tag ' + (feedback.type === 'complex' ? 'tag-complex' : 'tag-complicated');
+
+    document.getElementById('feedback-text').textContent = feedback.text;
+    document.getElementById('feedback-box').classList.add('show');
+
+    const isLast = currentScene === 2;
+    const nextBtn = document.getElementById('next-btn');
+    nextBtn.textContent = isLast ? '結果を見る ▶' : '次へ ▶';
+    nextBtn.style.display = 'block';
+  }
+
+  function nextScene() {
+    if (currentScene < 2) {
+      currentScene++;
+      renderScene();
+    } else {
+      showResult();
+    }
+  }
+
+  function showResult() {
+    showScreen('screen-result');
+    document.getElementById('score-display').textContent = `${score} / 3`;
+    const diag = diagnoses.find(d => d.score === score);
+    document.getElementById('diagnosis-text').textContent = diag.text;
+  }
+
+  function resetGame() {
+    showScreen('screen-title');
+  }
+</script>
+</body>
+</html>
